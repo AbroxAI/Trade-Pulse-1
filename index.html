@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Trade Pulse AI – Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        :root {
+            --bg: #040713;
+            --panel: #0a1020;
+            --panel2: #0c1428;
+            --line: rgba(255, 255, 255, .06);
+            --text: #f5f7ff;
+            --muted: #9aa3b2;
+            --purple: #a855f7;
+            --purple2: #7c3aed;
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --amber: #f59e0b;
+            --red: #ef4444;
+            --shadow-sm: 0 4px 12px rgba(0,0,0,.25);
+            --shadow-md: 0 8px 24px rgba(0,0,0,.35);
+            --safe: env(safe-area-inset-bottom, 0px);
+            --navh: 88px;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #040713;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        /* LOGIN SCREEN – no white flash */
+        .login-container {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #040713;
+            background-image: radial-gradient(circle at 50% 0%, rgba(168,85,247,0.08), transparent 30%),
+                              radial-gradient(circle at 75% 18%, rgba(59,130,246,0.06), transparent 22%),
+                              linear-gradient(180deg, #02040b 0%, #040713 100%);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .login-card {
+            width: 90%;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 30px 20px;
+            background: rgba(10,15,28,0.96);
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.06);
+            text-align: center;
+        }
+        .login-logo {
+            width: auto;
+            max-width: 180px;
+            height: auto;
+            margin: 0 auto 20px;
+            display: block;
+        }
+        .login-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .login-subtitle { font-size: 14px; color: #9aa3b2; margin-bottom: 24px; }
+        .toggle-row { display: flex; margin-bottom: 20px; background: rgba(255,255,255,0.04); border-radius: 14px; padding: 4px; }
+        .toggle-btn {
+            flex: 1; padding: 10px 0; border: none; background: transparent; color: #9aa3b2;
+            font-weight: 600; border-radius: 11px; cursor: pointer;
+        }
+        .toggle-btn.active { background: #a855f7; color: #fff; }
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-group label { font-size: 13px; color: #9aa3b2; margin-bottom: 6px; display: block; }
+        .form-group input {
+            width: 100%; height: 48px; background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+            padding: 0 14px; color: #fff; font-size: 15px; outline: none;
+        }
+        .form-group input:focus { border-color: #a855f7; }
+        .password-wrap { position: relative; }
+        .password-wrap input { padding-right: 44px; }
+        .eye-toggle {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: #9aa3b2; cursor: pointer; font-size: 18px;
+        }
+        .invite-note { font-size: 12px; color: #9aa3b2; margin-bottom: 20px; }
+        .btn {
+            width: 100%; height: 50px; background: linear-gradient(90deg, #6d28d9, #8b5cf6);
+            border: none; border-radius: 14px; color: #fff; font-weight: 700; font-size: 16px;
+            cursor: pointer;
+        }
+        .error-msg { color: #ef4444; font-size: 13px; margin-top: 10px; min-height: 20px; }
+        .success-msg { color: #22c55e; font-size: 13px; margin-top: 10px; }
+
+        /* MAIN APP */
+        .app {
+            display: none;
+            max-width: 430px;
+            margin: 0 auto;
+            padding-bottom: 100px;
+            position: relative;
+        }
+        .topbar { display: flex; justify-content: space-between; padding: 16px; align-items: center; }
+        .icon-btn { background: none; border: none; color: #fff; cursor: pointer; }
+        .title { font-size: 22px; font-weight: 700; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .section { padding: 0 16px; margin-top: 16px; }
+        .panel {
+            background: rgba(10,15,28,0.96);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            padding: 16px;
+        }
+        /* COMMUNITY - fixed black overlay */
+        .community-chat-col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-bottom: 160px;
+            background: transparent;
+        }
+        .community-input-bar {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(400px, 90%);
+            background: rgba(11,16,32,0.95);
+            border-radius: 18px;
+            padding: 10px 12px;
+            display: flex;
+            gap: 10px;
+            z-index: 20;
+        }
+        /* Drawer, modals, etc - minimal but functional */
+        .drawer-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+            z-index: 100; opacity: 0; pointer-events: none; transition: 0.3s;
+        }
+        .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+        .drawer-panel {
+            position: fixed; top: 0; left: 0; width: 280px; height: 100%;
+            background: #0a1020; transform: translateX(-100%); transition: 0.3s;
+            z-index: 101; padding: 20px; overflow-y: auto;
+        }
+        .drawer-panel.open { transform: translateX(0); }
+        .drawer-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #4c1d95);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            font-size: 26px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 2px black;
+        }
+        .camera-icon {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            background: #9333ea;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2;
+            font-size: 14px;
+        }
+        .withdraw-method-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 12px; }
+        .method-card { background: #0b1020; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 12px; text-align: center; cursor: pointer; }
+        .method-card.active { border-color: #a855f7; background: rgba(168,85,247,0.1); }
+        .amount-presets { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+        .preset { background: #0b1020; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 8px 12px; cursor: pointer; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); z-index: 200; display: none;
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-panel { background: #0a1020; border-radius: 24px; padding: 24px; max-width: 90%; width: 320px; text-align: center; }
+        .bottom-nav {
+            position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+            width: min(430px, 95%); background: rgba(11,16,32,0.98);
+            border-radius: 30px; display: flex; justify-content: space-around;
+            padding: 8px; z-index: 50;
+        }
+        .nav-item { background: none; border: none; color: #9aa3b2; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; cursor: pointer; }
+        .nav-item.active { color: #a855f7; }
+        .tx-row { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .chat-msg-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(168,85,247,0.2); display: flex; align-items: center; justify-content: center; }
+        .community-chat-card { background: rgba(10,15,28,0.96); border-radius: 16px; padding: 12px; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <!-- LOGIN SCREEN -->
+    <div class="login-container" id="loginScreen">
+        <div class="login-card">
+            <img src="assets/images/logo.png" alt="Trade Pulse AI Logo" class="login-logo" onerror="this.style.display='none'">
+            <div class="login-title" id="loginTitle">Sign In</div>
+            <div class="login-subtitle" id="loginSubtitle">Access your private trading dashboard</div>
+            <div class="toggle-row">
+                <button class="toggle-btn active" id="signInToggle">Sign In</button>
+                <button class="toggle-btn" id="signUpToggle">Sign Up</button>
+            </div>
+            <form id="authForm">
+                <div class="form-group" id="fullNameGroup" style="display:none;">
+                    <label>Full Name</label>
+                    <input type="text" id="fullName" placeholder="Full name">
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group" id="emailGroup" style="display:none;">
+                    <label>Email</label>
+                    <input type="email" id="email">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="password-wrap">
+                        <input type="password" id="password" required>
+                        <button type="button" class="eye-toggle" id="eyeBtn">👁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Invitation Code</label>
+                    <input type="text" id="inviteCode" required>
+                </div>
+                <div class="invite-note">A private invitation code is required to join.</div>
+                <button type="submit" class="btn" id="submitBtn">Sign In</button>
+                <div class="error-msg" id="errorMsg"></div>
+                <div class="success-msg" id="successMsg"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class="app" id="mainApp">
+        <div class="topbar">
+            <button class="icon-btn" id="menuBtn">☰</button>
+            <div class="title" id="pageTitle">Home</div>
+            <button class="icon-btn" id="notificationBell">🔔</button>
+        </div>
+
+        <!-- Home View (minimal) -->
+        <div class="view active" id="homeView">
+            <div class="section"><div class="panel">Welcome to Trade Pulse AI<br>Balance: ₦322,000</div></div>
+        </div>
+        <!-- Invest View -->
+        <div class="view" id="investView"><div class="section"><div class="panel">Invest plans will appear here</div></div></div>
+        <!-- Withdraw View -->
+        <div class="view" id="withdrawView">
+            <div class="section">
+                <div class="panel">
+                    <div id="withdrawBalance">₦322,000</div>
+                    <div class="withdraw-method-grid" id="methodContainer">
+                        <div data-method="bank" class="method-card active">🏦 Bank</div>
+                        <div data-method="usdt_trc20" class="method-card">₿ USDT TRC20</div>
+                        <div data-method="usdt_bep20" class="method-card">₿ USDT BEP20</div>
+                        <div data-method="ewallet" class="method-card">📱 E-Wallet</div>
+                    </div>
+                    <div id="withdrawFormArea"></div>
+                </div>
+            </div>
+        </div>
+        <!-- Wallet View -->
+        <div class="view" id="walletView"><div class="section"><div class="panel">Wallet details</div></div></div>
+        <!-- Community View -->
+        <div class="view" id="communityView">
+            <div class="section">
+                <div class="panel">
+                    <div class="community-chat-col" id="communityChatColumn"></div>
+                </div>
+            </div>
+            <div class="community-input-bar">
+                <span style="flex:1; color:#6b7280;">Type a message...</span>
+                <button class="community-send-btn">➤</button>
+            </div>
+        </div>
+
+        <!-- Drawer (sidebar) -->
+        <div class="drawer-overlay" id="drawerOverlay"></div>
+        <div class="drawer-panel" id="drawerPanel">
+            <button id="drawerCloseBtn" style="background:none; border:none; color:#fff; font-size:20px;">✕</button>
+            <div class="drawer-avatar" id="drawerAvatar">
+                <span style="z-index:1;">T</span>
+                <div class="camera-icon">📷</div>
+                <input type="file" id="avatarFileInput" accept="image/*" style="display:none">
+            </div>
+            <div>User: Temidayo</div>
+            <button id="drawerLogoutBtn" style="margin-top:20px; background:#ef4444; border:none; padding:10px; border-radius:12px; color:white;">Logout</button>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+            <button class="nav-item active" data-view="home">🏠 Home</button>
+            <button class="nav-item" data-view="invest">📈 Invest</button>
+            <button class="nav-item" data-view="withdraw">💸 Withdraw</button>
+            <button class="nav-item" data-view="wallet">💼 Wallet</button>
+            <button class="nav-item" data-view="community">👥 Community</button>
+        </div>
+    </div>
+
+    <!-- Logout Modal -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-panel">
+            <h3>Confirm Logout</h3>
+            <p>Are you sure you want to log out?</p>
+            <div style="display:flex; gap:12px; margin-top:20px;">
+                <button id="confirmLogoutBtn" style="flex:1; background:#ef4444; border:none; padding:10px; border-radius:12px; color:white;">Logout</button>
+                <button id="cancelLogoutBtn" style="flex:1; background:#333; border:none; padding:10px; border-radius:12px; color:white;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ======================== LOGIN / SIGNUP ========================
+        const VALID_INVITE = 'INVITE2024';
+        const loginScreen = document.getElementById('loginScreen');
+        const mainApp = document.getElementById('mainApp');
+
+        if (sessionStorage.getItem('loggedIn') === 'true') {
+            loginScreen.style.display = 'none';
+            mainApp.style.display = 'block';
+        }
+
+        let isSignUp = false;
+        const signInToggle = document.getElementById('signInToggle');
+        const signUpToggle = document.getElementById('signUpToggle');
+        const fullNameGroup = document.getElementById('fullNameGroup');
+        const emailGroup = document.getElementById('emailGroup');
+        const loginTitle = document.getElementById('loginTitle');
+        const loginSubtitle = document.getElementById('loginSubtitle');
+        const submitBtn = document.getElementById('submitBtn');
+
+        function setMode(signUp) {
+            isSignUp = signUp;
+            if (signUp) {
+                signUpToggle.classList.add('active'); signInToggle.classList.remove('active');
+                loginTitle.textContent = 'Create Account';
+                loginSubtitle.textContent = 'Join the exclusive trading community';
+                fullNameGroup.style.display = 'block';
+                emailGroup.style.display = 'block';
+                submitBtn.textContent = 'Sign Up';
+            } else {
+                signInToggle.classList.add('active'); signUpToggle.classList.remove('active');
+                loginTitle.textContent = 'Sign In';
+                loginSubtitle.textContent = 'Access your private dashboard';
+                fullNameGroup.style.display = 'none';
+                emailGroup.style.display = 'none';
+                submitBtn.textContent = 'Sign In';
+            }
+        }
+        signInToggle.addEventListener('click', () => setMode(false));
+        signUpToggle.addEventListener('click', () => setMode(true));
+
+        const passwordInput = document.getElementById('password');
+        document.getElementById('eyeBtn').addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+        });
+
+        document.getElementById('authForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('errorMsg');
+            const successMsg = document.getElementById('successMsg');
+            errorMsg.textContent = '';
+            successMsg.textContent = '';
+
+            const invite = document.getElementById('inviteCode').value.trim();
+            if (!invite || invite !== VALID_INVITE) {
+                errorMsg.textContent = 'Invalid invitation code.';
+                return;
+            }
+            const username = document.getElementById('username').value.trim();
+            const password = passwordInput.value;
+            if (!username || !password) {
+                errorMsg.textContent = 'Username and password required.';
+                return;
+            }
+            if (isSignUp) {
+                const fullName = document.getElementById('fullName').value.trim();
+                const email = document.getElementById('email').value.trim();
+                if (!fullName || !email) {
+                    errorMsg.textContent = 'Full name and email required.';
+                    return;
+                }
+                const userData = { fullName, username, email, password };
+                localStorage.setItem('user', JSON.stringify(userData));
+                successMsg.textContent = 'Account created! Redirecting...';
+                setTimeout(() => {
+                    sessionStorage.setItem('loggedIn', 'true');
+                    sessionStorage.setItem('currentUser', JSON.stringify(userData));
+                    loginScreen.style.display = 'none';
+                    mainApp.style.display = 'block';
+                }, 800);
+            } else {
+                const saved = localStorage.getItem('user');
+                if (!saved) {
+                    errorMsg.textContent = 'No account found. Please sign up first.';
+                    return;
+                }
+                const userData = JSON.parse(saved);
+                if (userData.username !== username || userData.password !== password) {
+                    errorMsg.textContent = 'Invalid credentials.';
+                    return;
+                }
+                sessionStorage.setItem('loggedIn', 'true');
+                sessionStorage.setItem('currentUser', JSON.stringify(userData));
+                successMsg.textContent = 'Signed in!';
+                setTimeout(() => {
+                    loginScreen.style.display = 'none';
+                    mainApp.style.display = 'block';
+                }, 600);
+            }
+        });
+
+        // ======================== AVATAR UPLOAD (USING BACKGROUND-IMAGE - RELIABLE) ========================
+        const drawerAvatar = document.getElementById('drawerAvatar');
+        const avatarFileInput = document.getElementById('avatarFileInput');
+        const avatarTextSpan = drawerAvatar.querySelector('span'); // the "T" text
+
+        function setAvatarImage(dataUrl) {
+            // Set background image of the avatar container
+            drawerAvatar.style.backgroundImage = `url('${dataUrl}')`;
+            drawerAvatar.style.backgroundSize = 'cover';
+            drawerAvatar.style.backgroundPosition = 'center';
+            // Hide the text span
+            if (avatarTextSpan) avatarTextSpan.style.display = 'none';
+            // Save to localStorage
+            localStorage.setItem('userAvatar', dataUrl);
+            console.log('Avatar updated and saved');
+            alert('Avatar updated successfully!');
+        }
+
+        // Load saved avatar
+        const savedAvatarData = localStorage.getItem('userAvatar');
+        if (savedAvatarData) {
+            setAvatarImage(savedAvatarData);
+        } else {
+            // Ensure text is visible
+            if (avatarTextSpan) avatarTextSpan.style.display = 'flex';
+        }
+
+        // Camera icon click: trigger file input
+        const cameraIcon = document.querySelector('.camera-icon');
+        if (cameraIcon) {
+            cameraIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                avatarFileInput.click();
+            });
+        } else {
+            // fallback: whole avatar click
+            drawerAvatar.addEventListener('click', () => avatarFileInput.click());
+        }
+
+        // File input change handler
+        avatarFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const dataUrl = ev.target.result;
+                    setAvatarImage(dataUrl);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                console.log('No file selected');
+            }
+        });
+
+        // ======================== LOGOUT MODAL ========================
+        const logoutBtn = document.getElementById('drawerLogoutBtn');
+        const logoutModal = document.getElementById('logoutModal');
+        const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+        const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+
+        logoutBtn.addEventListener('click', () => {
+            logoutModal.classList.add('open');
+        });
+        confirmLogoutBtn.addEventListener('click', () => {
+            sessionStorage.clear();
+            localStorage.clear();
+            location.reload();
+        });
+        cancelLogoutBtn.addEventListener('click', () => {
+            logoutModal.classList.remove('open');
+        });
+        logoutModal.addEventListener('click', (e) => {
+            if (e.target === logoutModal) logoutModal.classList.remove('open');
+        });
+
+        // ======================== WITHDRAW METHOD SWITCH (NO GLITCH) ========================
+        let activeMethod = 'bank';
+        const withdrawFormArea = document.getElementById('withdrawFormArea');
+        const methodCards = document.querySelectorAll('.method-card');
+        const withdrawBalanceSpan = document.getElementById('withdrawBalance');
+
+        function renderWithdrawForm() {
+            let html = '';
+            if (activeMethod === 'bank') {
+                html = `
+                    <input type="text" id="accNum" placeholder="Account Number" style="width:100%; margin-bottom:12px; padding:12px; border-radius:12px; background:#0b1020; border:1px solid rgba(255,255,255,0.08); color:#fff;">
+                    <select id="bankSelect" style="width:100%; margin-bottom:12px; padding:12px; border-radius:12px; background:#0b1020; border:1px solid rgba(255,255,255,0.08); color:#fff;">
+                        <option>GTBank</option><option>Opay</option><option>Access Bank</option>
+                    </select>
+                    <input type="number" id="amountInput" placeholder="Amount (₦)" style="width:100%; margin-bottom:12px; padding:12px; border-radius:12px; background:#0b1020; border:1px solid rgba(255,255,255,0.08); color:#fff;">
+                    <div class="amount-presets">
+                        <button type="button" class="preset" data-amount="1000">₦1,000</button>
+                        <button type="button" class="preset" data-amount="5000">₦5,000</button>
+                        <button type="button" class="preset" data-amount="10000">₦10,000</button>
+                    </div>
+                    <div>Fee: ₦50</div>
+                    <div>You receive: <span id="receiveAmount">₦0</span></div>
+                    <button id="submitWithdrawBtn" class="btn" style="margin-top:16px;">Request Withdrawal</button>
+                `;
+            } else if (activeMethod === 'usdt_trc20' || activeMethod === 'usdt_bep20') {
+                const network = activeMethod === 'usdt_trc20' ? 'TRC20' : 'BEP20';
+                html = `
+                    <input type="text" id="walletAddr" placeholder="${network} Wallet Address" style="width:100%; margin-bottom:12px; padding:12px; border-radius:12px; background:#0b1020; border:1px solid rgba(255,255,255,0.08); color:#fff;">
+                    <input type="number" id="amountInput" placeholder="Amount (USDT)" style="width:100%; margin-bottom:12px; padding:12px; border-radius:12px; background:#0b1020; border:1px solid rgba(255,255,255,0.08); color:#fff;">
+                    <div class="amount-presets">
+                        <button type="button" class="preset" data-amount="10">10 USDT</button>
+                        <button type="button" class="preset" data-amount="50">50 USDT</button>
+                        <button type="button" class="preset" data-amount="100">100 USDT</button>
+                    </div>
+                    <div>Network Fee: 1 USDT</div>
+                    <div>You receive: <span id="receiveAmount">0 USDT</span></div>
+                    <button id="submitWithdrawBtn" class="btn" style="margin-top:16px;">Request Withdrawal</button>
+                `;
+            } else if (activeMethod === 'ewallet') {
+                html = `
+                    <input type="text" id="ewalletId" placeholder="E-Wallet ID / Email" style="width:100%; margin-bottom:12px; padding:12px; border-radius:12px; background:#0b1020; border:1px solid rgba(255,255,255,0.08); color:#fff;">
+                    <input type="number" id="amountInput" placeholder="Amount (₦)" style="width:100%; margin-bottom:12px; padding:12px; border-radius:12px; background:#0b1020; border:1px solid rgba(255,255,255,0.08); color:#fff;">
+                    <div class="amount-presets">
+                        <button type="button" class="preset" data-amount="1000">₦1,000</button>
+                        <button type="button" class="preset" data-amount="5000">₦5,000</button>
+                    </div>
+                    <div>Fee: ₦50</div>
+                    <div>You receive: <span id="receiveAmount">₦0</span></div>
+                    <button id="submitWithdrawBtn" class="btn" style="margin-top:16px;">Request Withdrawal</button>
+                `;
+            }
+            withdrawFormArea.innerHTML = html;
+
+            document.querySelectorAll('.preset').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const amt = btn.dataset.amount;
+                    document.getElementById('amountInput').value = amt;
+                    updateReceive();
+                });
+            });
+            const amountInput = document.getElementById('amountInput');
+            if (amountInput) amountInput.addEventListener('input', updateReceive);
+            function updateReceive() {
+                let amt = parseFloat(document.getElementById('amountInput').value) || 0;
+                if (activeMethod === 'usdt_trc20' || activeMethod === 'usdt_bep20') {
+                    let receive = Math.max(0, amt - 1);
+                    document.getElementById('receiveAmount').innerText = receive.toFixed(2) + ' USDT';
+                } else {
+                    let receive = Math.max(0, amt - 50);
+                    document.getElementById('receiveAmount').innerText = '₦' + receive.toLocaleString();
+                }
+            }
+            document.getElementById('submitWithdrawBtn')?.addEventListener('click', () => {
+                alert('Withdrawal request submitted (demo).');
+            });
+        }
+
+        methodCards.forEach(card => {
+            card.addEventListener('click', () => {
+                methodCards.forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                activeMethod = card.dataset.method;
+                if (activeMethod.includes('usdt')) {
+                    withdrawBalanceSpan.innerText = '1,000 USDT';
+                } else {
+                    withdrawBalanceSpan.innerText = '₦322,000';
+                }
+                renderWithdrawForm();
+            });
+        });
+        renderWithdrawForm();
+
+        // ======================== COMMUNITY SIMULATION ========================
+        const chatColumn = document.getElementById('communityChatColumn');
+        function addDemoChat() {
+            const msgs = [
+                "Welcome to the community! 🚀",
+                "Just made a +120% profit!",
+                "Any news on the market?",
+                "Withdrawal took 2 minutes, amazing!",
+                "VIP plan is the best 🔥"
+            ];
+            const msg = msgs[Math.floor(Math.random() * msgs.length)];
+            const card = document.createElement('div');
+            card.className = 'community-chat-card';
+            card.innerHTML = `<div style="display:flex; gap:10px;"><div class="chat-msg-avatar">👤</div><div><b>Trader${Math.floor(Math.random()*100)}</b><br>${msg}</div></div>`;
+            chatColumn.prepend(card);
+            while (chatColumn.children.length > 50) chatColumn.removeChild(chatColumn.lastChild);
+        }
+        for (let i = 0; i < 5; i++) addDemoChat();
+        setInterval(() => {
+            if (document.getElementById('communityView').classList.contains('active')) addDemoChat();
+        }, 8000);
+
+        // ======================== NAVIGATION ========================
+        function setView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(view + 'View').classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            document.querySelector(`.nav-item[data-view="${view}"]`).classList.add('active');
+            document.getElementById('pageTitle').textContent = view.charAt(0).toUpperCase() + view.slice(1);
+        }
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.addEventListener('click', () => setView(btn.dataset.view));
+        });
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            document.getElementById('drawerOverlay').classList.add('open');
+            document.getElementById('drawerPanel').classList.add('open');
+        });
+        document.getElementById('drawerCloseBtn').addEventListener('click', () => {
+            document.getElementById('drawerOverlay').classList.remove('open');
+            document.getElementById('drawerPanel').classList.remove('open');
+        });
+        document.getElementById('drawerOverlay').addEventListener('click', () => {
+            document.getElementById('drawerOverlay').classList.remove('open');
+            document.getElementById('drawerPanel').classList.remove('open');
+        });
+    </script>
+</body>
+</html>
